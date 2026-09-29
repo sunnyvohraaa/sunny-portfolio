@@ -1,0 +1,42 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin · Sunny Vohra</title><meta name="robots" content="noindex">
+<style>
+body{font:16px/1.5 system-ui,sans-serif;background:#f6f5f2;color:#161616;margin:0;padding:24px;max-width:900px;margin-inline:auto}
+h1{font-size:24px}input,textarea,button{font:inherit;padding:8px 10px;border:1px solid #bbb;background:#fff;border-radius:4px}
+label{display:grid;gap:4px;margin:10px 0;font-size:14px}.row{display:flex;gap:12px}.row>*{flex:1}
+button{cursor:pointer}button.p{background:#161616;color:#fff;border-color:#161616}
+.item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #ddd}
+#s{min-height:1.5em}input[type=color]{padding:2px;height:38px}
+</style></head><body>
+<h1>Portfolio admin</h1>
+<label>Admin key<input id="k" type="password" autocomplete="current-password"></label>
+<button id="go" class="p">Unlock</button> <span id="s" role="status"></span>
+<div id="list"></div>
+<h2 id="ft">Add project</h2>
+<form id="f">
+<label>Title<input name="title" required></label>
+<div class="row"><label>Category<input name="category"></label><label>Year<input name="year"></label><label>Your role<input name="role"></label></div>
+<label>Summary (brief, process, outcome)<textarea name="summary" rows="5"></textarea></label>
+<div class="row"><label>Tile colour<input name="bg" type="color" value="#222222"></label><label>Text colour<input name="fg" type="color" value="#ffffff"></label><label>Order<input name="order" type="number" value="99"></label></div>
+<label>Cover image URL (optional, shown instead of the colour tile)<input name="image"></label>
+<label>Gallery image URLs, one per line<textarea name="gallery" rows="4"></textarea></label>
+<button class="p">Save project</button> <button type="button" id="new">Clear form</button>
+</form>
+<script>
+const $=s=>document.querySelector(s),f=$('#f');let edit=null,list=[];
+const H=()=>({'Content-Type':'application/json','x-admin-key':$('#k').value});
+const say=t=>$('#s').textContent=t;
+async function load(){const r=await fetch('/api/projects');list=await r.json();const box=$('#list');box.replaceChildren();
+ list.forEach(p=>{const d=document.createElement('div');d.className='item';const n=document.createElement('span');n.textContent=`${p.order}. ${p.title}`;
+  const b=document.createElement('span');const e=document.createElement('button');e.textContent='Edit';e.onclick=()=>fill(p);
+  const x=document.createElement('button');x.textContent='Delete';x.onclick=async()=>{if(!confirm('Delete '+p.title+'?'))return;
+   const r=await fetch('/api/projects/'+p.slug,{method:'DELETE',headers:H()});say(r.ok?'Deleted.':'Wrong admin key.');load()};
+  b.append(e,' ',x);d.append(n,b);box.append(d)})}
+function fill(p){edit=p.slug;$('#ft').textContent='Edit '+p.title;for(const k of['title','category','year','role','summary','bg','fg','order','image'])f[k].value=p[k];f.gallery.value=p.gallery.join('\n');scrollTo(0,document.body.scrollHeight)}
+$('#new').onclick=()=>{edit=null;f.reset();$('#ft').textContent='Add project'};
+$('#go').onclick=async()=>{const r=await fetch('/api/messages',{headers:H()});say(r.ok?`Unlocked. ${(await r.json()).length} messages in data/messages.json.`:'Wrong admin key.')};
+f.onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(f));b.gallery=b.gallery.split('\n').map(s=>s.trim()).filter(Boolean);
+ const r=await fetch(edit?'/api/projects/'+edit:'/api/projects',{method:edit?'PUT':'POST',headers:H(),body:JSON.stringify(b)});
+ const j=await r.json();say(r.ok?'Saved.':j.error);if(r.ok){edit=null;f.reset();$('#ft').textContent='Add project';load()}};
+load();
+</script></body></html>
